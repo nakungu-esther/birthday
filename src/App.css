@@ -1,0 +1,456 @@
+/* Import this file in your React component with: import './BirthdayRSVP.css'; */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+  min-height: 100vh;
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  background: #d4af37;
+  animation: fall linear infinite;
+  z-index: 1;
+}
+
+@keyframes fall {
+  0% {
+    top: -10%;
+    opacity: 1;
+  }
+  100% {
+    top: 110%;
+    opacity: 0.3;
+  }
+}
+
+.confetti:nth-child(odd) {
+  background: #f4e4a6;
+}
+
+.confetti:nth-child(3n) {
+  background: #2c3e50;
+}
+
+.audio-control {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  border: 2px solid #2c3e50;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s;
+  z-index: 1000;
+}
+
+.audio-control:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.audio-control.playing {
+  background: #2c3e50;
+  color: white;
+}
+
+.container {
+  max-width: 1200px;
+  width: 100%;
+  background: white;
+  border-radius: 2px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.left-section {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  padding: 50px 40px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.left-section::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #d4af37 0%, #f4e4a6 50%, #d4af37 100%);
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 35px;
+}
+
+.photo-item {
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.photo-item:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.photo-item img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.header-content {
+  text-align: center;
+}
+
+.header-content h1 {
+  font-size: 36px;
+  margin-bottom: 12px;
+  font-weight: 400;
+  letter-spacing: 1px;
+}
+
+.event-details {
+  font-size: 16px;
+  opacity: 0.95;
+  line-height: 1.6;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.event-details strong {
+  color: #d4af37;
+  font-weight: 600;
+}
+
+.divider {
+  width: 60px;
+  height: 2px;
+  background: #d4af37;
+  margin: 20px auto;
+}
+
+.right-section {
+  padding: 50px 40px;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+.section-title {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #2c3e50;
+  margin-bottom: 25px;
+  font-weight: 600;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.form-group {
+  margin-bottom: 28px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.form-row .form-group {
+  margin-bottom: 0;
+}
+
+label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 14px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.required {
+  color: #d4af37;
+  margin-left: 3px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="number"],
+textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 1px;
+  font-size: 15px;
+  transition: all 0.3s;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #fafafa;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #2c3e50;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.05);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  padding: 16px 18px;
+  border: 1px solid #d1d5db;
+  border-radius: 1px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #fafafa;
+}
+
+.radio-option:hover {
+  border-color: #2c3e50;
+  background: white;
+}
+
+.radio-option input[type="radio"] {
+  margin-right: 12px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2c3e50;
+}
+
+.radio-option.selected {
+  border-color: #2c3e50;
+  background: white;
+  box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+}
+
+.radio-option span {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #2c3e50;
+  font-size: 15px;
+}
+
+button {
+  width: 100%;
+  padding: 16px;
+  background: #2c3e50;
+  color: white;
+  border: none;
+  border-radius: 1px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+button:hover {
+  background: #34495e;
+  box-shadow: 0 6px 16px rgba(44, 62, 80, 0.25);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+.success-message {
+  display: none;
+  text-align: center;
+  padding: 60px 40px;
+}
+
+.success-message.show {
+  display: block;
+}
+
+.success-icon {
+  font-size: 70px;
+  margin-bottom: 25px;
+  color: #2c3e50;
+}
+
+.success-message h2 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-weight: 400;
+  font-size: 28px;
+}
+
+.success-message p {
+  color: #6c757d;
+  font-size: 16px;
+  line-height: 1.6;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#guestCount {
+  display: none;
+}
+
+#guestCount.show {
+  display: block;
+}
+
+.form-note {
+  font-size: 13px;
+  color: #6c757d;
+  margin-top: 6px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-style: italic;
+}
+
+.lightbox {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 2000;
+  justify-content: center;
+  align-items: center;
+}
+
+.lightbox.active {
+  display: flex;
+}
+
+.lightbox img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  color: white;
+  font-size: 40px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.2);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+@media (max-width: 900px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+
+  .left-section::after {
+    width: 100%;
+    height: 4px;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(90deg, #d4af37 0%, #f4e4a6 50%, #d4af37 100%);
+  }
+
+  .right-section {
+    max-height: none;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .form-row .form-group {
+    margin-bottom: 28px;
+  }
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 20px 10px;
+  }
+
+  .left-section {
+    padding: 40px 25px;
+  }
+
+  .header-content h1 {
+    font-size: 28px;
+  }
+
+  .right-section {
+    padding: 35px 25px;
+  }
+
+  .event-details {
+    font-size: 15px;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
