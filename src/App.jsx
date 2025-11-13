@@ -16,6 +16,19 @@ export default function BirthdayRSVP() {
   const [confetti, setConfetti] = useState([]);
   const [submittedEmails, setSubmittedEmails] = useState([]);
   const [popup, setPopup] = useState({ show: false, message: '', type: '' });
+  const [imageErrors, setImageErrors] = useState({});
+  const [audio] = useState(new Audio('music/birthday-song.mp3'));
+
+  useEffect(() => {
+    // Configure audio
+    audio.loop = true;
+    audio.volume = 0.5;
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, [audio]);
 
   useEffect(() => {
     const confettiCount = 30;
@@ -67,6 +80,13 @@ export default function BirthdayRSVP() {
       ...prev,
       attendance: value,
       guestCount: value !== 'yes' ? '' : prev.guestCount
+    }));
+  };
+
+  const handleImageError = (imageSrc) => {
+    setImageErrors(prev => ({
+      ...prev,
+      [imageSrc]: true
     }));
   };
 
@@ -248,8 +268,18 @@ Event Details: December 14th, 2025 at 4:00 PM
             isPlaying ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'
           }`}
           onClick={() => {
-            setIsPlaying(!isPlaying);
-            showPopup(isPlaying ? 'Music paused' : 'Music playing', 'info');
+            if (isPlaying) {
+              audio.pause();
+              setIsPlaying(false);
+              showPopup('Music paused', 'info');
+            } else {
+              audio.play().catch(err => {
+                console.error('Audio play failed:', err);
+                showPopup('Could not play music. Click again to try.', 'error');
+              });
+              setIsPlaying(true);
+              showPopup('Music playing ♪', 'info');
+            }
           }}
           title="Play/Pause Music"
           aria-label="Toggle music"
@@ -271,12 +301,19 @@ Event Details: December 14th, 2025 at 4:00 PM
           >
             ×
           </button>
-          <img
-            src={lightboxImage}
-            alt="Enlarged"
-            className="max-w-[90%] max-h-[90%] object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
+          {imageErrors[lightboxImage] ? (
+            <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-lg p-20 text-white text-6xl">
+              📷
+            </div>
+          ) : (
+            <img
+              src={lightboxImage}
+              alt="Enlarged"
+              className="max-w-[90%] max-h-[90%] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+              onError={() => handleImageError(lightboxImage)}
+            />
+          )}
         </div>
       )}
 
@@ -288,7 +325,14 @@ Event Details: December 14th, 2025 at 4:00 PM
             className="relative w-full max-w-md mx-auto cursor-pointer transform transition-all duration-300 hover:scale-105"
             onClick={() => {
               setBookOpen(true);
-              showPopup('Welcome to Esther\'s Birthday Celebration! ✨', 'success');
+              // Auto-play music when book opens
+              audio.play().then(() => {
+                setIsPlaying(true);
+                showPopup('Welcome to Esther\'s Birthday Celebration! ✨', 'success');
+              }).catch(err => {
+                console.error('Auto-play failed:', err);
+                showPopup('Welcome! Click the music button to play sound 🎵', 'info');
+              });
             }}
             style={{ animation: 'pulse 2s ease-in-out infinite' }}
           >
@@ -299,15 +343,19 @@ Event Details: December 14th, 2025 at 4:00 PM
               {/* Cover Content */}
               <div className="text-center relative z-10">
                 {/* Main Photo */}
-                <div className="w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden border-4 border-yellow-600 shadow-xl">
-                  <img
-                    src="images/LOVE.jpg"
-                    alt="Esther"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.parentElement.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-6xl">👑</div>';
-                    }}
-                  />
+                <div className="relative w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden border-4 border-yellow-600 shadow-xl">
+                  {imageErrors['images/LOVE.jpg'] ? (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-6xl">
+                      👑
+                    </div>
+                  ) : (
+                    <img
+                      src="images/LOVE.jpg"
+                      alt="Esther"
+                      className="w-full h-full object-cover"
+                      onError={() => handleImageError('images/LOVE.jpg')}
+                    />
+                  )}
                 </div>
                 
                 <h1 className="text-3xl sm:text-4xl font-bold text-yellow-400 mb-3 tracking-wide">
@@ -352,14 +400,18 @@ Event Details: December 14th, 2025 at 4:00 PM
                       className="relative w-full pb-[100%] overflow-hidden rounded-md shadow-lg cursor-pointer transition-all hover:scale-105 hover:shadow-2xl hover:z-10"
                       onClick={() => setLightboxImage(img.src)}
                     >
-                      <img
-                        src={img.src}
-                        alt={img.alt}
-                        className="absolute top-0 left-0 w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.parentElement.innerHTML = '<div class="absolute inset-0 bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-2xl sm:text-4xl">📷</div>';
-                        }}
-                      />
+                      {imageErrors[img.src] ? (
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-2xl sm:text-4xl">
+                          📷
+                        </div>
+                      ) : (
+                        <img
+                          src={img.src}
+                          alt={img.alt}
+                          className="absolute top-0 left-0 w-full h-full object-cover"
+                          onError={() => handleImageError(img.src)}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
