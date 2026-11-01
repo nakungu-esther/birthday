@@ -1,198 +1,467 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
-export default function BirthdayRSVP() {
+const INITIAL_FORM = {
+  fullName: "",
+  email: "",
+  phone: "",
+  attendance: "",
+  guestCount: "",
+  notes: "",
+};
+
+const IMAGES = [
+  { src: "/images/LOVE.jpg", alt: "Esther" },
+  { src: "/images/TT.jpg", alt: "Esther" },
+  { src: "/images/RR.jpg", alt: "Esther" },
+  { src: "/images/UU.jpg", alt: "Esther" },
+  { src: "/images/YY.jpg", alt: "Esther" },
+  { src: "/images/OO.jpg", alt: "Esther" },
+];
+
+export default function App() {
   const [bookOpen, setBookOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    attendance: '',
-    guestCount: '',
-    notes: ''
-  });
+  const [formData, setFormData] = useState({ ...INITIAL_FORM });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [lightboxImage, setLightboxImage] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [confetti, setConfetti] = useState([]);
   const [submittedEmails, setSubmittedEmails] = useState([]);
-  const [popup, setPopup] = useState({ show: false, message: '', type: '' });
   const [imageErrors, setImageErrors] = useState({});
-  const [audio] = useState(new Audio('music/birthday-song.mp3'));
+  const [popup, setPopup] = useState({
+    show: false,
+    message: "",
+    type: "info",
+  });
+
+  const audioRef = useRef(null);
+  const popupTimerRef = useRef(null);
 
   useEffect(() => {
-    // Configure audio
+    const audio = new Audio("/music/birthday-song.mp3");
+
     audio.loop = true;
     audio.volume = 0.5;
+    audioRef.current = audio;
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
 
     return () => {
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
       audio.pause();
       audio.currentTime = 0;
-    };
-  }, [audio]);
 
-  useEffect(() => {
-    const confettiCount = 30;
-    const confettiElements = [];
-    for (let i = 0; i < confettiCount; i++) {
-      confettiElements.push({
-        id: i,
-        left: Math.random() * 100,
-        duration: Math.random() * 3 + 4,
-        delay: Math.random() * 5,
-        opacity: Math.random() * 0.5 + 0.5,
-        rotate: Math.random() * 360,
-        color: i % 3 === 0 ? '#2c3e50' : i % 2 === 0 ? '#f4e4a6' : '#d4af37'
-      });
-    }
-    setConfetti(confettiElements);
-
-    // Load submitted emails from storage
-    const loadSubmittedEmails = async () => {
-      try {
-        const result = await window.storage.get('submitted-emails', true);
-        if (result && result.value) {
-          setSubmittedEmails(JSON.parse(result.value));
-        }
-      } catch (error) {
-        console.log('No previous submissions found');
+      if (audioRef.current === audio) {
+        audioRef.current = null;
       }
     };
-    loadSubmittedEmails();
   }, []);
 
-  const showPopup = (message, type = 'success') => {
-    setPopup({ show: true, message, type });
-    setTimeout(() => {
-      setPopup({ show: false, message: '', type: '' });
+  useEffect(() => {
+    const elements = Array.from({ length: 30 }, (_, index) => ({
+      id: index,
+      left: Math.random() * 100,
+      duration: Math.random() * 3 + 4,
+      delay: Math.random() * 5,
+      opacity: Math.random() * 0.5 + 0.5,
+      rotate: Math.random() * 360,
+      color:
+        index % 3 === 0
+          ? "#9ca3af"
+          : index % 2 === 0
+            ? "#ffffff"
+            : "#d4af37",
+    }));
+
+    setConfetti(elements);
+
+    try {
+      const stored = localStorage.getItem("esther-birthday-submitted-emails");
+
+      if (stored) {
+        const parsed = JSON.parse(stored);
+
+        if (Array.isArray(parsed)) {
+          setSubmittedEmails(
+            parsed.filter((email) => typeof email === "string"),
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Could not load previous submissions:", error);
+    }
+
+    return () => {
+      window.clearTimeout(popupTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!lightboxImage) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setLightboxImage(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [lightboxImage]);
+
+  const showPopup = (message, type = "success") => {
+    window.clearTimeout(popupTimerRef.current);
+
+    setPopup({
+      show: true,
+      message,
+      type,
+    });
+
+    popupTimerRef.current = window.setTimeout(() => {
+      setPopup({
+        show: false,
+        message: "",
+        type: "info",
+      });
     }, 4000);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
+  const dismissPopup = () => {
+    window.clearTimeout(popupTimerRef.current);
+
+    setPopup({
+      show: false,
+      message: "",
+      type: "info",
+    });
+  };
+
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
     }));
   };
 
   const handleAttendanceChange = (value) => {
-    setFormData(prev => ({
-      ...prev,
+    setFormData((previous) => ({
+      ...previous,
       attendance: value,
-      guestCount: value !== 'yes' ? '' : prev.guestCount
+      guestCount: value === "yes" ? previous.guestCount : "",
     }));
   };
 
-  const handleImageError = (imageSrc) => {
-    setImageErrors(prev => ({
-      ...prev,
-      [imageSrc]: true
+  const handleImageError = (src) => {
+    setImageErrors((previous) => ({
+      ...previous,
+      [src]: true,
     }));
   };
 
-  const handleSubmit = async () => {
-    if (!formData.fullName || !formData.email || !formData.attendance) {
-      showPopup('Please fill in all required fields', 'error');
-      return;
-    }
-    
-    if (formData.attendance === 'yes' && !formData.guestCount) {
-      showPopup('Please specify the number of guests', 'error');
+  const openBook = async () => {
+    setBookOpen(true);
+
+    const audio = audioRef.current;
+
+    if (!audio) {
+      showPopup("Welcome to Esther's Birthday Celebration! ✨", "success");
       return;
     }
 
-    // Check if email has already been used
-    const emailLower = formData.email.toLowerCase().trim();
-    if (submittedEmails.includes(emailLower)) {
-      showPopup('This email has already been used. Please use a different email or contact Esther directly.', 'error');
+    try {
+      await audio.play();
+
+      showPopup(
+        "Welcome to Esther's Birthday Celebration! ✨",
+        "success",
+      );
+    } catch (error) {
+      console.error("Could not start music:", error);
+
+      showPopup(
+        "Welcome! Tap the music button to play sound 🎵",
+        "info",
+      );
+    }
+  };
+
+  const toggleMusic = async () => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    if (!audio.paused) {
+      audio.pause();
+      showPopup("Music paused", "info");
       return;
     }
-    
+
+    try {
+      await audio.play();
+      showPopup("Music playing ♪", "info");
+    } catch (error) {
+      console.error("Could not play music:", error);
+
+      showPopup(
+        "Could not play music. Please check that the music file is available.",
+        "error",
+      );
+    }
+  };
+
+  const closeBook = () => {
+    audioRef.current?.pause();
+
+    setBookOpen(false);
+    setIsSubmitted(false);
+    setFormData({ ...INITIAL_FORM });
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (isSubmitting) return;
+
+    const fullName = formData.fullName.trim();
+    const email = formData.email.toLowerCase().trim();
+
+    if (!fullName || !email || !formData.attendance) {
+      showPopup("Please fill in all required fields.", "error");
+      return;
+    }
+
+    const guestCount = Number(formData.guestCount);
+
+    if (
+      formData.attendance === "yes" &&
+      (!Number.isInteger(guestCount) ||
+        guestCount < 1 ||
+        guestCount > 20)
+    ) {
+      showPopup(
+        "Please enter between 1 and 20 guests, including yourself.",
+        "error",
+      );
+      return;
+    }
+
+    if (submittedEmails.includes(email)) {
+      showPopup(
+        "An RSVP has already been submitted with this email on this browser. Please contact Esther if you need to change it.",
+        "error",
+      );
+      return;
+    }
+
     const emailBody = `
 New RSVP for Esther's Birthday Celebration
 ==========================================
 
-Name: ${formData.fullName}
-Email: ${formData.email}
-Phone: ${formData.phone || 'Not provided'}
+Name: ${fullName}
+Email: ${email}
+Phone: ${formData.phone.trim() || "Not provided"}
 Attendance: ${formData.attendance}
-${formData.attendance === 'yes' ? `Number of Guests: ${formData.guestCount}` : ''}
-Notes: ${formData.notes || 'None'}
+${
+  formData.attendance === "yes"
+    ? `Number of Guests: ${guestCount}`
+    : ""
+}
+Notes: ${formData.notes.trim() || "None"}
 
-Event Details: December 14th, 2025 at 4:00 PM
+Event Date: December 14th, 2026
+Time: 5:00 PM onwards
+Venue: To be communicated
+Dress Code: Grey and White
     `.trim();
 
+    setIsSubmitting(true);
+    showPopup("Submitting your RSVP...", "info");
+
     try {
-      showPopup('Submitting your RSVP...', 'info');
-      
-      const response = await fetch('https://formspree.io/f/xdkyoqbg', {
-        method: 'POST',
+      const response = await fetch("https://formspree.io/f/xdkyoqbg", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify({
-          name: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
+          name: fullName,
+          email,
+          phone: formData.phone.trim(),
           attendance: formData.attendance,
-          guestCount: formData.guestCount,
-          notes: formData.notes,
-          message: emailBody
-        })
+          guestCount: formData.attendance === "yes" ? guestCount : "",
+          notes: formData.notes.trim(),
+          venue: "To be communicated",
+          dressCode: "Grey and White",
+          message: emailBody,
+        }),
       });
 
-      if (response.ok) {
-        // Add email to submitted list and save to storage
-        const updatedEmails = [...submittedEmails, emailLower];
-        setSubmittedEmails(updatedEmails);
-        
-        try {
-          await window.storage.set('submitted-emails', JSON.stringify(updatedEmails), true);
-        } catch (storageError) {
-          console.error('Could not save to storage:', storageError);
-        }
-        
-        showPopup('🎉 RSVP submitted successfully!', 'success');
-        setTimeout(() => {
-          setIsSubmitted(true);
-        }, 1500);
-      } else {
-        showPopup('There was a problem submitting your RSVP. Please try again.', 'error');
+      if (!response.ok) {
+        showPopup(
+          "There was a problem submitting your RSVP. Please try again.",
+          "error",
+        );
+        return;
       }
+
+      const updatedEmails = [...submittedEmails, email];
+
+      setSubmittedEmails(updatedEmails);
+
+      try {
+        localStorage.setItem(
+          "esther-birthday-submitted-emails",
+          JSON.stringify(updatedEmails),
+        );
+      } catch (error) {
+        console.error("Could not save submission locally:", error);
+      }
+
+      setIsSubmitted(true);
+      showPopup("🎉 RSVP submitted successfully!", "success");
     } catch (error) {
-      console.error('Error:', error);
-      showPopup('Connection error. Please check your internet and try again.', 'error');
+      console.error("RSVP submission failed:", error);
+
+      showPopup(
+        "Connection error. Please check your internet and try again.",
+        "error",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const images = [
-    { src: 'images/LOVE.jpg', alt: 'Esther' },
-    { src: 'images/TT.jpg', alt: 'Esther' },
-    { src: 'images/RR.jpg', alt: 'Esther' },
-    { src: 'images/UU.jpg', alt: 'Esther' },
-    { src: 'images/YY.jpg', alt: 'Esther' },
-    { src: 'images/OO.jpg', alt: 'Esther' }
-  ];
+  const inputClass =
+    "w-full rounded-md border border-gray-300 bg-gray-50 p-3 text-sm font-sans text-gray-800 transition-all focus:border-gray-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-200 sm:p-3.5 sm:text-base";
+
+  const labelClass =
+    "mb-2 block font-sans text-sm font-medium text-gray-800";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 p-4 flex items-center justify-center relative overflow-hidden font-serif">
-      {/* Sweet Popup Notification */}
+    <div className="relative flex min-h-screen items-center justify-center overflow-x-hidden bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 p-4 font-serif sm:p-6">
+      <style>{`
+        @keyframes birthday-fall {
+          0% {
+            transform: translateY(-10vh) rotate(0deg);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(110vh) rotate(360deg);
+            opacity: 0.2;
+          }
+        }
+
+        @keyframes birthday-fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes birthday-cover-pulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.025);
+          }
+        }
+
+        @keyframes birthday-book-reveal {
+          from {
+            opacity: 0;
+            transform: scale(0.94);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes birthday-popup {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .birthday-cover {
+          animation: birthday-cover-pulse 2.5s ease-in-out infinite;
+        }
+
+        .birthday-book {
+          animation: birthday-book-reveal 0.7s ease-out both;
+        }
+
+        .birthday-page {
+          animation: birthday-fade-in 0.7s ease-out both;
+        }
+
+        .birthday-popup {
+          animation: birthday-popup 0.3s ease-out both;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .birthday-cover,
+          .birthday-book,
+          .birthday-page,
+          .birthday-popup,
+          .birthday-confetti {
+            animation: none !important;
+          }
+        }
+      `}</style>
+
+      {/* Popup notification */}
       {popup.show && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] w-11/12 max-w-md animate-slideDown">
-          <div className={`rounded-lg shadow-2xl p-4 flex items-center gap-3 backdrop-blur-sm ${
-            popup.type === 'success' ? 'bg-green-50 border-2 border-green-500 text-green-800' :
-            popup.type === 'error' ? 'bg-red-50 border-2 border-red-500 text-red-800' :
-            'bg-blue-50 border-2 border-blue-500 text-blue-800'
-          }`}>
-            <div className="text-2xl flex-shrink-0">
-              {popup.type === 'success' ? '✓' : popup.type === 'error' ? '⚠' : 'ℹ'}
-            </div>
-            <div className="flex-1 font-sans text-sm sm:text-base font-medium">
+        <div className="fixed left-1/2 top-4 z-[100] w-11/12 max-w-md -translate-x-1/2">
+          <div
+            role={popup.type === "error" ? "alert" : "status"}
+            className={`birthday-popup flex items-center gap-3 rounded-lg border-2 p-4 shadow-2xl ${
+              popup.type === "success"
+                ? "border-green-500 bg-green-50 text-green-800"
+                : popup.type === "error"
+                  ? "border-red-500 bg-red-50 text-red-800"
+                  : "border-blue-500 bg-blue-50 text-blue-800"
+            }`}
+          >
+            <span className="shrink-0 text-2xl" aria-hidden="true">
+              {popup.type === "success"
+                ? "✓"
+                : popup.type === "error"
+                  ? "⚠"
+                  : "ℹ"}
+            </span>
+
+            <p className="flex-1 font-sans text-sm font-medium sm:text-base">
               {popup.message}
-            </div>
+            </p>
+
             <button
-              onClick={() => setPopup({ show: false, message: '', type: '' })}
-              className="text-xl leading-none opacity-60 hover:opacity-100 flex-shrink-0"
+              type="button"
+              onClick={dismissPopup}
+              aria-label="Dismiss notification"
+              className="shrink-0 text-2xl leading-none opacity-60 hover:opacity-100"
             >
               ×
             </button>
@@ -200,268 +469,257 @@ Event Details: December 14th, 2025 at 4:00 PM
         </div>
       )}
 
-      {/* Confetti Animation */}
-      {bookOpen && confetti.map(item => (
-        <div
-          key={item.id}
-          className="fixed w-2.5 h-2.5 pointer-events-none z-50"
-          style={{
-            left: `${item.left}%`,
-            top: '-10%',
-            backgroundColor: item.color,
-            opacity: item.opacity,
-            transform: `rotate(${item.rotate}deg)`,
-            animation: `fall ${item.duration}s linear infinite ${item.delay}s`
-          }}
-        />
-      ))}
+      {/* Confetti */}
+      {bookOpen &&
+        confetti.map((item) => (
+          <div
+            key={item.id}
+            aria-hidden="true"
+            className="birthday-confetti pointer-events-none fixed top-0 z-40 h-2.5 w-2.5"
+            style={{
+              left: `${item.left}%`,
+              backgroundColor: item.color,
+              opacity: item.opacity,
+              rotate: `${item.rotate}deg`,
+              animation: `birthday-fall ${item.duration}s linear ${item.delay}s infinite`,
+              animationFillMode: "backwards",
+            }}
+          />
+        ))}
 
-      <style>{`
-        @keyframes fall {
-          0% { top: -10%; opacity: 1; }
-          100% { top: 110%; opacity: 0.3; }
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-        
-        @keyframes scaleUp {
-          from { transform: scale(0.8); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        
-        @keyframes slideDown {
-          from { 
-            transform: translate(-50%, -100%);
-            opacity: 0;
-          }
-          to { 
-            transform: translate(-50%, 0);
-            opacity: 1;
-          }
-        }
-        
-        .animate-slideDown {
-          animation: slideDown 0.4s ease-out forwards;
-        }
-        
-        .page-content {
-          animation: fadeIn 0.8s ease-in 0.5s forwards;
-        }
-        
-        .book-reveal {
-          animation: scaleUp 1s ease-out forwards;
-        }
-      `}</style>
-
-      {/* Audio Control */}
+      {/* Music control */}
       {bookOpen && (
         <button
-          className={`fixed top-3 right-3 sm:top-5 sm:right-5 w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-gray-800 flex items-center justify-center text-lg sm:text-xl cursor-pointer shadow-lg transition-all hover:scale-110 z-50 ${
-            isPlaying ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'
+          type="button"
+          onClick={toggleMusic}
+          title={isPlaying ? "Pause music" : "Play music"}
+          aria-label={isPlaying ? "Pause music" : "Play music"}
+          aria-pressed={isPlaying}
+          className={`fixed right-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-full border-2 border-gray-800 text-xl shadow-lg transition-transform hover:scale-110 sm:right-5 sm:top-5 sm:h-12 sm:w-12 ${
+            isPlaying
+              ? "bg-gray-800 text-white"
+              : "bg-white text-gray-800"
           }`}
-          onClick={() => {
-            if (isPlaying) {
-              audio.pause();
-              setIsPlaying(false);
-              showPopup('Music paused', 'info');
-            } else {
-              audio.play().catch(err => {
-                console.error('Audio play failed:', err);
-                showPopup('Could not play music. Click again to try.', 'error');
-              });
-              setIsPlaying(true);
-              showPopup('Music playing ♪', 'info');
-            }
-          }}
-          title="Play/Pause Music"
-          aria-label="Toggle music"
         >
-          {isPlaying ? '🎵' : '🔇'}
+          {isPlaying ? "🎵" : "🔇"}
         </button>
       )}
 
-      {/* Lightbox */}
+      {/* Image lightbox */}
       {lightboxImage && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo preview"
           onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4"
         >
           <button
-            className="absolute top-4 right-4 sm:top-8 sm:right-8 text-white text-3xl sm:text-4xl w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center hover:bg-opacity-30 transition-all hover:rotate-90"
+            type="button"
             onClick={() => setLightboxImage(null)}
-            aria-label="Close lightbox"
+            aria-label="Close photo preview"
+            className="absolute right-4 top-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-4xl text-white transition-colors hover:bg-white/30"
           >
             ×
           </button>
+
           {imageErrors[lightboxImage] ? (
-            <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-lg p-20 text-white text-6xl">
+            <div className="rounded-lg bg-gray-700 p-16 text-6xl text-white">
               📷
             </div>
           ) : (
             <img
               src={lightboxImage}
-              alt="Enlarged"
-              className="max-w-[90%] max-h-[90%] object-contain rounded-lg"
-              onClick={(e) => e.stopPropagation()}
+              alt="Esther, enlarged"
+              onClick={(event) => event.stopPropagation()}
               onError={() => handleImageError(lightboxImage)}
+              className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
             />
           )}
         </div>
       )}
 
-      {/* Book Container */}
-      <div className="relative w-full max-w-6xl mx-auto">
+      <main className="relative mx-auto w-full max-w-6xl">
         {!bookOpen ? (
-          /* Closed Book Cover */
-          <div 
-            className="relative w-full max-w-md mx-auto cursor-pointer transform transition-all duration-300 hover:scale-105"
-            onClick={() => {
-              setBookOpen(true);
-              // Auto-play music when book opens
-              audio.play().then(() => {
-                setIsPlaying(true);
-                showPopup('Welcome to Esther\'s Birthday Celebration! ✨', 'success');
-              }).catch(err => {
-                console.error('Auto-play failed:', err);
-                showPopup('Welcome! Click the music button to play sound 🎵', 'info');
-              });
-            }}
-            style={{ animation: 'pulse 2s ease-in-out infinite' }}
+          /* Closed invitation */
+          <button
+            type="button"
+            onClick={openBook}
+            aria-label="Open Esther's birthday invitation"
+            className="birthday-cover relative mx-auto block w-full max-w-md cursor-pointer rounded-xl text-center shadow-2xl focus:outline-none focus:ring-4 focus:ring-yellow-500"
           >
-            <div className="relative bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 rounded-lg shadow-2xl p-8 border-4 border-yellow-600">
-              {/* Book Spine Effect */}
-              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-yellow-700 to-yellow-600 rounded-l-lg" />
-              
-              {/* Cover Content */}
-              <div className="text-center relative z-10">
-                {/* Main Photo */}
-                <div className="relative w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden border-4 border-yellow-600 shadow-xl">
-                  {imageErrors['images/LOVE.jpg'] ? (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-6xl">
+            <div className="relative overflow-hidden rounded-xl border-4 border-yellow-600 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 p-8">
+              <div className="absolute bottom-0 left-0 top-0 w-6 bg-gradient-to-r from-yellow-700 to-yellow-600" />
+
+              <div className="relative z-10 pl-3">
+                <div className="relative mx-auto mb-6 h-44 w-44 overflow-hidden rounded-full border-4 border-yellow-600 shadow-xl sm:h-48 sm:w-48">
+                  {imageErrors["/images/LOVE.jpg"] ? (
+                    <div className="flex h-full w-full items-center justify-center bg-gray-600 text-6xl">
                       👑
                     </div>
                   ) : (
                     <img
-                      src="images/LOVE.jpg"
+                      src="/images/LOVE.jpg"
                       alt="Esther"
-                      className="w-full h-full object-cover"
-                      onError={() => handleImageError('images/LOVE.jpg')}
+                      onError={() => handleImageError("/images/LOVE.jpg")}
+                      className="h-full w-full object-cover"
                     />
                   )}
                 </div>
-                
-                <h1 className="text-3xl sm:text-4xl font-bold text-yellow-400 mb-3 tracking-wide">
-                  Esther's
+
+                <h1 className="mb-3 text-3xl font-bold tracking-wide text-yellow-400 sm:text-4xl">
+                  Esther&apos;s
                 </h1>
-                <div className="text-5xl sm:text-6xl font-bold text-white mb-4">
+
+                <div className="mb-4 text-5xl font-bold text-white sm:text-6xl">
                   Birthday
                 </div>
-                <div className="text-2xl sm:text-3xl text-yellow-400 mb-6">
+
+                <div className="mb-6 text-2xl text-yellow-400 sm:text-3xl">
                   Celebration
                 </div>
-                
-                <div className="text-white text-lg mb-6">
-                  December 14th, 2025
-                </div>
-                
-                <div className="inline-block bg-yellow-600 text-gray-900 px-6 py-3 rounded-full font-semibold animate-pulse">
-                  Tap to Open ✨
-                </div>
-              </div>
-              
-              {/* Decorative corners */}
-              <div className="absolute top-4 left-12 text-yellow-600 text-3xl">❋</div>
-              <div className="absolute top-4 right-4 text-yellow-600 text-3xl">❋</div>
-              <div className="absolute bottom-4 left-12 text-yellow-600 text-3xl">❋</div>
-              <div className="absolute bottom-4 right-4 text-yellow-600 text-3xl">❋</div>
-            </div>
-          </div>
-        ) : (
-          /* Opened Book */
-          <div className="relative w-full book-reveal">
-            <div className="grid grid-cols-1 lg:grid-cols-2 bg-white rounded-lg shadow-2xl overflow-hidden">
-              {/* Left Page */}
-              <div className={`bg-gradient-to-br from-gray-800 to-gray-700 p-6 sm:p-8 md:p-10 lg:p-12 text-white flex flex-col justify-center relative ${bookOpen ? 'page-content' : 'opacity-0'}`}>
-                <div className="absolute top-0 right-0 w-1 h-full bg-gradient-to-b from-yellow-600 via-yellow-200 to-yellow-600 hidden lg:block" />
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 via-yellow-200 to-yellow-600 lg:hidden" />
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6 sm:mb-8">
-                  {images.map((img, idx) => (
-                    <div
-                      key={idx}
-                      className="relative w-full pb-[100%] overflow-hidden rounded-md shadow-lg cursor-pointer transition-all hover:scale-105 hover:shadow-2xl hover:z-10"
-                      onClick={() => setLightboxImage(img.src)}
+                <p className="mb-6 text-lg text-white">
+                  December 14th, 2026
+                </p>
+
+                <span className="inline-block rounded-full bg-yellow-600 px-6 py-3 font-sans font-semibold text-gray-900">
+                  Tap to Open ✨
+                </span>
+              </div>
+
+              <span
+                aria-hidden="true"
+                className="absolute left-10 top-3 text-3xl text-yellow-600"
+              >
+                ❋
+              </span>
+              <span
+                aria-hidden="true"
+                className="absolute right-3 top-3 text-3xl text-yellow-600"
+              >
+                ❋
+              </span>
+              <span
+                aria-hidden="true"
+                className="absolute bottom-3 left-10 text-3xl text-yellow-600"
+              >
+                ❋
+              </span>
+              <span
+                aria-hidden="true"
+                className="absolute bottom-3 right-3 text-3xl text-yellow-600"
+              >
+                ❋
+              </span>
+            </div>
+          </button>
+        ) : (
+          /* Open invitation */
+          <div className="birthday-book overflow-hidden rounded-xl bg-white shadow-2xl">
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              {/* Left page */}
+              <section className="birthday-page relative flex flex-col justify-center bg-gradient-to-br from-gray-800 to-gray-700 p-6 text-white sm:p-8 md:p-10 lg:p-12">
+                <div className="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-yellow-600 via-yellow-200 to-yellow-600 lg:hidden" />
+
+                <div className="absolute bottom-0 right-0 top-0 hidden w-1 bg-gradient-to-b from-yellow-600 via-yellow-200 to-yellow-600 lg:block" />
+
+                <div className="mb-6 grid grid-cols-2 gap-2 sm:mb-8 sm:grid-cols-3">
+                  {IMAGES.map((image, index) => (
+                    <button
+                      key={image.src}
+                      type="button"
+                      onClick={() => setLightboxImage(image.src)}
+                      aria-label={`Enlarge Esther photo ${index + 1}`}
+                      className="relative aspect-square overflow-hidden rounded-md shadow-lg transition-transform hover:z-10 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     >
-                      {imageErrors[img.src] ? (
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-2xl sm:text-4xl">
+                      {imageErrors[image.src] ? (
+                        <div className="flex h-full w-full items-center justify-center bg-gray-600 text-4xl">
                           📷
                         </div>
                       ) : (
                         <img
-                          src={img.src}
-                          alt={img.alt}
-                          className="absolute top-0 left-0 w-full h-full object-cover"
-                          onError={() => handleImageError(img.src)}
+                          src={image.src}
+                          alt={image.alt}
+                          onError={() => handleImageError(image.src)}
+                          className="h-full w-full object-cover"
                         />
                       )}
-                    </div>
+                    </button>
                   ))}
                 </div>
 
                 <div className="text-center">
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl mb-3 font-normal tracking-wide">
-                    Esther's Birthday Celebration
+                  <h1 className="mb-3 text-2xl font-normal tracking-wide sm:text-3xl md:text-4xl">
+                    Esther&apos;s Birthday Celebration
                   </h1>
-                  <div className="w-12 sm:w-16 h-0.5 bg-yellow-600 mx-auto my-4 sm:my-5" />
-                  <div className="text-sm sm:text-base leading-relaxed font-sans">
-                    <strong className="text-yellow-600 font-semibold">Sunday, December 14th, 2025</strong>
-                    <br />
-                    4:00 PM onwards
-                    <br />
-                    [Venue to be confirmed]
+
+                  <div className="mx-auto my-5 h-0.5 w-16 bg-yellow-600" />
+
+                  <div className="space-y-3 font-sans text-sm leading-relaxed sm:text-base">
+                    <p className="font-semibold text-yellow-400">
+                      December 14th, 2026
+                    </p>
+
+                    <p>5:00 PM onwards</p>
+
+                    <p>
+                      <strong>Venue:</strong> To be communicated
+                    </p>
+
+                    <div className="pt-2">
+                      <div className="inline-flex flex-col items-center gap-2 rounded-xl border border-gray-300 bg-gray-100 px-6 py-4 text-gray-800 shadow-sm">
+                        <span className="text-xs font-semibold uppercase tracking-widest text-gray-600">
+                          Dress Code
+                        </span>
+
+                        <span className="text-lg font-semibold sm:text-xl">
+                          Grey and White
+                        </span>
+
+                        <div
+                          aria-hidden="true"
+                          className="flex items-center gap-3"
+                        >
+                          <span className="h-5 w-5 rounded-full border border-gray-500 bg-gray-500" />
+                          <span className="h-5 w-5 rounded-full border border-gray-300 bg-white" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </section>
 
-              {/* Right Page - Form or Thank You */}
-              <div className={`p-6 sm:p-8 md:p-10 lg:p-12 overflow-y-auto max-h-screen lg:max-h-[90vh] ${bookOpen ? 'page-content' : 'opacity-0'}`}>
+              {/* Right page */}
+              <section className="birthday-page p-6 sm:p-8 md:p-10 lg:max-h-[90vh] lg:overflow-y-auto lg:p-12">
                 {isSubmitted ? (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center py-8">
-                      <div className="text-5xl sm:text-6xl mb-6">✨</div>
-                      <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">Thank You!</h2>
-                      <p className="text-base sm:text-lg text-gray-700 mb-6 font-sans">
+                  <div className="flex h-full items-center justify-center">
+                    <div className="py-8 text-center">
+                      <div className="mb-6 text-6xl">✨</div>
+
+                      <h2 className="mb-4 text-3xl font-bold text-gray-800 sm:text-4xl">
+                        Thank You!
+                      </h2>
+
+                      <p className="mb-6 font-sans text-base text-gray-700 sm:text-lg">
                         Your RSVP has been received.
                       </p>
-                      <div className="max-w-md mx-auto text-sm sm:text-base text-gray-600 leading-relaxed mb-8 font-sans italic">
-                        "A woman of grace, kindness, and radiant joy. Her laughter lights up every room, 
-                        and her heart touches every soul. Here's to another year of being absolutely wonderful!"
-                      </div>
-                      <div className="text-sm text-gray-500 font-sans">
+
+                      <blockquote className="mx-auto mb-8 max-w-md font-sans text-sm italic leading-relaxed text-gray-600 sm:text-base">
+                        A woman of grace, kindness, and radiant joy. Her
+                        laughter lights up every room, and her heart
+                        touches every soul. Here&apos;s to another year of
+                        being absolutely wonderful!
+                      </blockquote>
+
+                      <p className="font-sans text-sm text-gray-500">
                         With love and gratitude
-                      </div>
+                      </p>
+
                       <button
-                        onClick={() => {
-                          setIsSubmitted(false);
-                          setBookOpen(false);
-                          setFormData({
-                            fullName: '',
-                            email: '',
-                            phone: '',
-                            attendance: '',
-                            guestCount: '',
-                            notes: ''
-                          });
-                        }}
-                        className="mt-8 px-6 py-3 bg-gray-800 text-white rounded-full font-semibold hover:bg-gray-700 transition-all font-sans"
+                        type="button"
+                        onClick={closeBook}
+                        className="mt-8 rounded-full bg-gray-800 px-6 py-3 font-sans font-semibold text-white transition-colors hover:bg-gray-700"
                       >
                         Close Book
                       </button>
@@ -469,136 +727,183 @@ Event Details: December 14th, 2025 at 4:00 PM
                   </div>
                 ) : (
                   <>
-                    <div className="text-xs sm:text-sm uppercase tracking-widest text-gray-800 mb-5 sm:mb-6 font-semibold font-sans">
+                    <h2 className="mb-6 font-sans text-sm font-semibold uppercase tracking-widest text-gray-800">
                       Kindly Respond
-                    </div>
+                    </h2>
 
-                    <div className="space-y-5 sm:space-y-7">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                    <form
+                      onSubmit={handleSubmit}
+                      className="space-y-5 sm:space-y-7"
+                    >
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                          <label className="block mb-2 sm:mb-2.5 font-medium text-gray-800 text-sm font-sans">
-                            Full Name <span className="text-yellow-600">*</span>
+                          <label htmlFor="fullName" className={labelClass}>
+                            Full Name{" "}
+                            <span className="text-yellow-600">*</span>
                           </label>
+
                           <input
+                            id="fullName"
                             type="text"
                             name="fullName"
+                            autoComplete="name"
+                            required
                             value={formData.fullName}
                             onChange={handleInputChange}
                             placeholder="Enter your full name"
-                            className="w-full p-3 sm:p-3.5 border border-gray-300 bg-gray-50 text-sm sm:text-base font-sans transition-all focus:outline-none focus:border-gray-800 focus:bg-white focus:shadow-sm rounded-sm"
+                            className={inputClass}
                           />
                         </div>
 
                         <div>
-                          <label className="block mb-2 sm:mb-2.5 font-medium text-gray-800 text-sm font-sans">
-                            Email Address <span className="text-yellow-600">*</span>
+                          <label htmlFor="email" className={labelClass}>
+                            Email Address{" "}
+                            <span className="text-yellow-600">*</span>
                           </label>
+
                           <input
+                            id="email"
                             type="email"
                             name="email"
+                            autoComplete="email"
+                            required
                             value={formData.email}
                             onChange={handleInputChange}
                             placeholder="your.email@example.com"
-                            className="w-full p-3 sm:p-3.5 border border-gray-300 bg-gray-50 text-sm sm:text-base font-sans transition-all focus:outline-none focus:border-gray-800 focus:bg-white focus:shadow-sm rounded-sm"
+                            className={inputClass}
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block mb-2 sm:mb-2.5 font-medium text-gray-800 text-sm font-sans">
+                        <label htmlFor="phone" className={labelClass}>
                           Phone Number
                         </label>
+
                         <input
+                          id="phone"
                           type="tel"
                           name="phone"
+                          autoComplete="tel"
                           value={formData.phone}
                           onChange={handleInputChange}
                           placeholder="+256 XXX XXX XXX"
-                          className="w-full p-3 sm:p-3.5 border border-gray-300 bg-gray-50 text-sm sm:text-base font-sans transition-all focus:outline-none focus:border-gray-800 focus:bg-white focus:shadow-sm rounded-sm"
+                          aria-describedby="phone-help"
+                          className={inputClass}
                         />
-                        <div className="text-xs text-gray-500 mt-1.5 italic font-sans">
-                          Optional - for event updates
-                        </div>
+
+                        <p
+                          id="phone-help"
+                          className="mt-1.5 font-sans text-xs italic text-gray-500"
+                        >
+                          Optional — for event updates
+                        </p>
                       </div>
 
-                      <div>
-                        <label className="block mb-2 sm:mb-2.5 font-medium text-gray-800 text-sm font-sans">
-                          Will you attend? <span className="text-yellow-600">*</span>
-                        </label>
-                        <div className="flex flex-col gap-2.5 sm:gap-3.5">
-                          {['yes', 'maybe', 'no'].map((value) => (
+                      <fieldset>
+                        <legend className={labelClass}>
+                          Will you attend?{" "}
+                          <span className="text-yellow-600">*</span>
+                        </legend>
+
+                        <div className="flex flex-col gap-3">
+                          {[
+                            { value: "yes", label: "Yes, I will attend" },
+                            {
+                              value: "maybe",
+                              label: "Possibly, to be confirmed",
+                            },
+                            { value: "no", label: "Unable to attend" },
+                          ].map((option) => (
                             <label
-                              key={value}
-                              className={`flex items-center p-3 sm:p-4 border cursor-pointer transition-all bg-gray-50 hover:border-gray-800 hover:bg-white rounded-sm ${
-                                formData.attendance === value
-                                  ? 'border-gray-800 bg-white shadow-sm'
-                                  : 'border-gray-300'
+                              key={option.value}
+                              className={`flex cursor-pointer items-center rounded-md border p-3 transition-colors sm:p-4 ${
+                                formData.attendance === option.value
+                                  ? "border-gray-800 bg-white shadow-sm"
+                                  : "border-gray-300 bg-gray-50 hover:border-gray-600"
                               }`}
                             >
                               <input
                                 type="radio"
                                 name="attendance"
-                                value={value}
-                                checked={formData.attendance === value}
-                                onChange={() => handleAttendanceChange(value)}
-                                className="mr-3 w-4 h-4 cursor-pointer accent-gray-800 flex-shrink-0"
+                                required
+                                value={option.value}
+                                checked={
+                                  formData.attendance === option.value
+                                }
+                                onChange={() =>
+                                  handleAttendanceChange(option.value)
+                                }
+                                className="mr-3 h-4 w-4 shrink-0 accent-gray-800"
                               />
-                              <span className="font-sans text-gray-800 text-sm sm:text-base">
-                                {value === 'yes' && 'Yes, I will attend'}
-                                {value === 'maybe' && 'Possibly, to be confirmed'}
-                                {value === 'no' && 'Unable to attend'}
+
+                              <span className="font-sans text-sm text-gray-800 sm:text-base">
+                                {option.label}
                               </span>
                             </label>
                           ))}
                         </div>
-                      </div>
+                      </fieldset>
 
-                      {formData.attendance === 'yes' && (
+                      {formData.attendance === "yes" && (
                         <div>
-                          <label className="block mb-2 sm:mb-2.5 font-medium text-gray-800 text-sm font-sans">
-                            Number of guests (including yourself) <span className="text-yellow-600">*</span>
+                          <label
+                            htmlFor="guestCount"
+                            className={labelClass}
+                          >
+                            Number of guests (including yourself){" "}
+                            <span className="text-yellow-600">*</span>
                           </label>
+
                           <input
+                            id="guestCount"
                             type="number"
                             name="guestCount"
                             min="1"
                             max="20"
+                            step="1"
+                            required
                             value={formData.guestCount}
                             onChange={handleInputChange}
                             placeholder="Enter number"
-                            className="w-full p-3 sm:p-3.5 border border-gray-300 bg-gray-50 text-sm sm:text-base font-sans transition-all focus:outline-none focus:border-gray-800 focus:bg-white focus:shadow-sm rounded-sm"
+                            className={inputClass}
                           />
                         </div>
                       )}
 
                       <div>
-                        <label className="block mb-2 sm:mb-2.5 font-medium text-gray-800 text-sm font-sans">
+                        <label htmlFor="notes" className={labelClass}>
                           Dietary restrictions or special requests
                         </label>
+
                         <textarea
+                          id="notes"
                           name="notes"
+                          rows={4}
                           value={formData.notes}
                           onChange={handleInputChange}
                           placeholder="Please let us know of any dietary requirements, allergies, or other considerations..."
-                          rows="4"
-                          className="w-full p-3 sm:p-3.5 border border-gray-300 bg-gray-50 text-sm sm:text-base font-sans transition-all resize-y focus:outline-none focus:border-gray-800 focus:bg-white focus:shadow-sm rounded-sm"
+                          className={`${inputClass} resize-y`}
                         />
                       </div>
 
                       <button
-                        onClick={handleSubmit}
-                        className="w-full p-3.5 sm:p-4 bg-gray-800 text-white text-sm sm:text-base font-semibold cursor-pointer transition-all uppercase tracking-wide font-sans hover:bg-gray-700 hover:shadow-lg active:translate-y-px rounded-sm"
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full rounded-md bg-gray-800 p-4 font-sans text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-gray-700 disabled:cursor-wait disabled:opacity-60 sm:text-base"
                       >
-                        Submit Response
+                        {isSubmitting
+                          ? "Submitting..."
+                          : "Submit Response"}
                       </button>
-                    </div>
+                    </form>
                   </>
                 )}
-              </div>
+              </section>
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
